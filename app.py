@@ -161,18 +161,44 @@ def history():
 def export_history():
     import csv
     import io
+    from database import Database
+    from flask import Response
 
     db = Database()
     scans = db.get_history(limit=1000, offset=0)
 
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = csv.writer(output, delimiter=';')
 
-    # Header CSV
+    # ===============================
+    # SUMMARY SECTION
+    # ===============================
+    total_scans = len(scans)
+    high = sum(1 for s in scans if s["risk_level"] == "HIGH")
+    medium = sum(1 for s in scans if s["risk_level"] == "MEDIUM")
+    low = sum(1 for s in scans if s["risk_level"] == "LOW")
+    safe = sum(1 for s in scans if s["risk_level"] == "SAFE")
+
+    writer.writerow(["IP Threat Intelligence Report"])
+    writer.writerow([])
+    writer.writerow(["Generated At:", __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+    writer.writerow(["Total Scans:", total_scans])
+    writer.writerow(["High Risk:", high])
+    writer.writerow(["Medium Risk:", medium])
+    writer.writerow(["Low Risk:", low])
+    writer.writerow(["Safe:", safe])
+    writer.writerow([])
+    writer.writerow(["=" * 80])
+    writer.writerow([])
+
+    # ===============================
+    # TABLE HEADER
+    # ===============================
     writer.writerow([
         "ID",
         "IP Address",
         "Risk Level",
+        "Risk Score",
         "Malicious",
         "Suspicious",
         "Harmless",
@@ -182,17 +208,22 @@ def export_history():
         "Scan Date"
     ])
 
-    # Data rows
+    # ===============================
+    # DATA ROWS
+    # ===============================
     for scan in scans:
+        risk_score = (scan["malicious"] * 3) + (scan["suspicious"] * 2)
+
         writer.writerow([
             scan["id"],
             scan["ip_address"],
             scan["risk_level"],
+            risk_score,
             scan["malicious"],
             scan["suspicious"],
             scan["harmless"],
-            scan["country"],
-            scan["as_owner"],
+            scan["country"] or "-",
+            scan["as_owner"] or "-",
             scan["scan_type"],
             scan["scan_date"]
         ])
@@ -204,7 +235,7 @@ def export_history():
         mimetype="text/csv",
         headers={
             "Content-Disposition":
-            "attachment; filename=scan_history.csv"
+            "attachment; filename=ip_threat_report.csv"
         }
     )
 
