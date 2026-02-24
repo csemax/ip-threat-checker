@@ -28,3 +28,5 @@ Buka browser → http://127.0.0.1:5000
 
 
 PUT YOUR API KEY IN .ENV FILE
+--
+VT_API_KEY=your_actual_virustotal_api_key_here
