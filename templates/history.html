@@ -8,6 +8,13 @@
         <p class="text-muted">Riwayat semua pengecekan IP</p>
     </div>
     <div class="col-md-6 text-end">
+
+        <!-- Export CSV -->
+        <a href="{{ url_for('export_history') }}" class="btn btn-success me-2">
+            <i class="bi bi-file-earmark-excel me-1"></i>Export CSV
+        </a>
+
+        <!-- Clear History -->
         <form method="POST" action="{{ url_for('clear_history') }}"
               onsubmit="return confirm('Hapus semua riwayat?')" class="d-inline">
             <button type="submit" class="btn btn-outline-danger">
@@ -65,31 +72,21 @@
                         <td><code>{{ scan.ip_address }}</code></td>
                         <td>
                             <span class="badge bg-{{ scan.risk_level|risk_color }}">
-                                <i class="{{ scan.risk_level|risk_icon }} me-1"></i>
                                 {{ scan.risk_level }}
                             </span>
                         </td>
-                        <td><span class="text-danger fw-bold">{{ scan.malicious }}</span></td>
-                        <td><span class="text-warning">{{ scan.suspicious }}</span></td>
-                        <td><span class="text-success">{{ scan.harmless }}</span></td>
+                        <td>{{ scan.malicious }}</td>
+                        <td>{{ scan.suspicious }}</td>
+                        <td>{{ scan.harmless }}</td>
                         <td>{{ scan.country }}</td>
-                        <td><small>{{ scan.as_owner[:30] }}{% if scan.as_owner|length > 30 %}...{% endif %}</small></td>
-                        <td><span class="badge bg-secondary">{{ scan.scan_type }}</span></td>
-                        <td><small>{{ scan.scan_date }}</small></td>
+                        <td>{{ scan.as_owner }}</td>
+                        <td>{{ scan.scan_type }}</td>
+                        <td>{{ scan.scan_date }}</td>
                         <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ url_for('detail', scan_id=scan.id) }}"
-                                   class="btn btn-outline-primary" title="Detail">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <form method="POST" action="{{ url_for('delete_scan', scan_id=scan.id) }}"
-                                      class="d-inline"
-                                      onsubmit="return confirm('Hapus record ini?')">
-                                    <button type="submit" class="btn btn-outline-danger" title="Hapus">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
+                            <a href="{{ url_for('detail', scan_id=scan.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}

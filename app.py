@@ -3,7 +3,7 @@ app.py - Main Application
 Pegadaian IP Security Checker
 Sistem Automasi Pengecekan IP menggunakan VirusTotal API
 
-Author: [Nama Anda] - PKL Pegadaian 2024
+Author: Fariz Ubaidillah - PKL Pegadaian 2026
 """
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
@@ -12,6 +12,9 @@ from database import Database
 from vt_client import VirusTotalClient
 from ip_validator import IPValidator
 import json
+import csv
+from io import StringIO
+from flask import Response
 
 # ==========================================
 # INISIALISASI APP
@@ -82,7 +85,19 @@ def bulk_check():
 
     if request.method == 'POST':
         ip_input = request.form.get('ip_list', '').strip()
+        file = request.files.get('ip_file')
 
+        # Jika ada file yang diupload
+        if file and file.filename != '':
+            try:
+                file_content = file.read().decode('utf-8')
+                # Gabungkan isi file dengan textarea
+                if ip_input:
+                    ip_input += "\n" + file_content
+                else:
+                    ip_input = file_content
+            except Exception:
+                errors.append("Gagal membaca file. Pastikan format UTF-8.")
         if not ip_input:
             errors.append('Masukkan minimal 1 IP address')
         else:
@@ -140,6 +155,57 @@ def history():
         scans=scans,
         search=search,
         page=page
+    )
+
+@app.route("/export_history")
+def export_history():
+    import csv
+    import io
+
+    db = Database()
+    scans = db.get_history(limit=1000, offset=0)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header CSV
+    writer.writerow([
+        "ID",
+        "IP Address",
+        "Risk Level",
+        "Malicious",
+        "Suspicious",
+        "Harmless",
+        "Country",
+        "AS Owner",
+        "Scan Type",
+        "Scan Date"
+    ])
+
+    # Data rows
+    for scan in scans:
+        writer.writerow([
+            scan["id"],
+            scan["ip_address"],
+            scan["risk_level"],
+            scan["malicious"],
+            scan["suspicious"],
+            scan["harmless"],
+            scan["country"],
+            scan["as_owner"],
+            scan["scan_type"],
+            scan["scan_date"]
+        ])
+
+    output.seek(0)
+
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition":
+            "attachment; filename=scan_history.csv"
+        }
     )
 
 

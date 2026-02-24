@@ -14,15 +14,24 @@
     <div class="col-md-4">
         <div class="card shadow-sm">
             <div class="card-body">
-                <form method="POST" action="{{ url_for('bulk_check') }}">
+                <form method="POST" action="{{ url_for('bulk_check') }}" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label for="ip_list" class="form-label fw-bold">
                             <i class="bi bi-list-ul me-1"></i>Daftar IP Address
                         </label>
                         <textarea class="form-control" id="ip_list" name="ip_list"
                                   rows="10"
-                                  placeholder="Masukkan IP, satu per baris:&#10;8.8.8.8&#10;1.1.1.1&#10;208.67.222.222"
-                                  required>{{ ip_input }}</textarea>
+                                  placeholder="Masukkan IP, satu per baris:&#10;8.8.8.8&#10;1.1.1.1&#10;208.67.222.222" >{{ ip_input }}</textarea>
+                        <div class="mb-3">
+                        <label for="ip_file" class="form-label fw-bold">
+                            <i class="bi bi-upload me-1"></i>Upload File IP (.txt / .csv)
+                        </label>
+                            <input type="file" class="form-control" id="ip_file" name="ip_file"
+                            accept=".txt,.csv">
+                            <div class="form-text">
+                                File harus berisi IP dipisah baris baru, koma, atau spasi.
+                            </div>
+                        </div>
                         <div class="form-text">
                             Pisahkan dengan baris baru, koma, atau spasi.<br>
                             <strong>Catatan:</strong> Free API limit 4 request/menit.
