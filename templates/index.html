@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-1">
+            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+        </h2>
+        <p class="text-muted">Ringkasan status keamanan IP</p>
+    </div>
+</div>
+
+<!-- API Status Alert -->
+{% if not api_valid %}
+<div class="alert alert-warning border-start border-5 border-warning">
+    <h5><i class="bi bi-exclamation-triangle me-2"></i>API Key Belum Dikonfigurasi</h5>
+    <p class="mb-2">Untuk menggunakan sistem ini, Anda perlu API Key dari VirusTotal:</p>
+    <ol class="mb-2">
+        <li>Daftar gratis di <a href="https://www.virustotal.com/gui/join-us" target="_blank">virustotal.com</a></li>
+        <li>Buka <strong>Profile → API Key</strong></li>
+        <li>Copy API Key dan paste di file <code>config.py</code> atau set environment variable <code>VT_API_KEY</code></li>
+    </ol>
+    <code>VT_API_KEY = 'your_actual_api_key_here'</code>
+</div>
+{% endif %}
+
+<!-- STAT CARDS -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="display-4 text-primary fw-bold">{{ stats.total_scans }}</div>
+                <small class="text-muted">
+                    <i class="bi bi-search me-1"></i>Total Scan
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+            <div class="card-body text-center">
+                <div class="display-4 text-danger fw-bold">{{ stats.high_risk }}</div>
+                <small class="text-muted">
+                    <i class="bi bi-exclamation-triangle me-1"></i>High Risk
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+            <div class="card-body text-center">
+                <div class="display-4 text-warning fw-bold">{{ stats.medium_risk }}</div>
+                <small class="text-muted">
+                    <i class="bi bi-exclamation-circle me-1"></i>Medium Risk
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+            <div class="card-body text-center">
+                <div class="display-4 text-success fw-bold">{{ stats.safe }}</div>
+                <small class="text-muted">
+                    <i class="bi bi-shield-check me-1"></i>Safe
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QUICK CHECK & RECENT -->
+<div class="row g-3">
+    <!-- Quick Check -->
+    <div class="col-md-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Check</h5>
+            </div>
+            <div class="card-body">
+                <form id="quickCheckForm">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control form-control-lg"
+                               id="quickIp" placeholder="Masukkan IP Address..."
+                               autocomplete="off">
+                        <button class="btn btn-success" type="submit" id="quickCheckBtn">
+                            <i class="bi bi-search"></i> Cek
+                        </button>
+                    </div>
+                </form>
+
+                <div id="quickResult" class="d-none">
+                    <!-- Hasil akan muncul di sini via JavaScript -->
+                </div>
+
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Masukkan public IP address (contoh: 8.8.8.8, 1.1.1.1)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Scans -->
+    <div class="col-md-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Scan Terakhir</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if stats.recent_scans %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Risk</th>
+                                <th>Deteksi</th>
+                                <th>Waktu</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for scan in stats.recent_scans %}
+                            <tr>
+                                <td>
+                                    <code>{{ scan.ip_address }}</code>
+                                    {% if scan.country != '-' %}
+                                    <small class="text-muted ms-1">{{ scan.country }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ scan.risk_level|risk_color }}">
+                                        {{ scan.risk_level }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-danger">{{ scan.malicious }}</span> /
+                                    <span class="text-muted">{{ scan.total_vendors }}</span>
+                                </td>
+                                <td><small>{{ scan.scan_date }}</small></td>
+                                <td>
+                                    <a href="{{ url_for('detail', scan_id=scan.id) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox display-1"></i>
+                    <p class="mt-2">Belum ada data scan</p>
+                    <a href="{{ url_for('single_check') }}" class="btn btn-success">
+                        <i class="bi bi-search me-1"></i> Mulai Scan
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- INFO -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card bg-light border-0">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <i class="bi bi-shield-check display-6 text-success"></i>
+                        <h6 class="mt-2">SAFE</h6>
+                        <small class="text-muted">0 vendor mendeteksi ancaman</small>
+                    </div>
+                    <div class="col-md-3">
+                        <i class="bi bi-info-circle display-6 text-info"></i>
+                        <h6 class="mt-2">LOW</h6>
+                        <small class="text-muted">1+ vendor curiga (suspicious)</small>
+                    </div>
+                    <div class="col-md-3">
+                        <i class="bi bi-exclamation-circle display-6 text-warning"></i>
+                        <h6 class="mt-2">MEDIUM</h6>
+                        <small class="text-muted">1-4 vendor deteksi malicious</small>
+                    </div>
+                    <div class="col-md-3">
+                        <i class="bi bi-exclamation-triangle display-6 text-danger"></i>
+                        <h6 class="mt-2">HIGH</h6>
+                        <small class="text-muted">5+ vendor deteksi malicious</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('quickCheckForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const ip = document.getElementById('quickIp').value.trim();
+    const btn = document.getElementById('quickCheckBtn');
+    const resultDiv = document.getElementById('quickResult');
+
+    if (!ip) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Checking...';
+    resultDiv.classList.add('d-none');
+
+    try {
+        const response = await fetch('/api/check-ip', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ip: ip})
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            const riskColors = {HIGH:'danger', MEDIUM:'warning', LOW:'info', SAFE:'success'};
+            const color = riskColors[data.risk_level] || 'secondary';
+
+            resultDiv.innerHTML = `
+                <div class="alert alert-${color}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${data.ip_address}</strong>
+                            <span class="badge bg-${color} ms-2">${data.risk_level}</span>
+                        </div>
+                        <a href="/detail/${data.scan_id}" class="btn btn-sm btn-outline-${color}">Detail</a>
+                    </div>
+                    <hr>
+                    <small>
+                        🔴 Malicious: <strong>${data.malicious}</strong> |
+                        🟡 Suspicious: <strong>${data.suspicious}</strong> |
+                        🟢 Clean: <strong>${data.harmless}</strong> |
+                        ⚪ Undetected: <strong>${data.undetected}</strong>
+                    </small>
+                    <br>
+                    <small class="text-muted">
+                        Country: ${data.country || '-'} | 
+                        Network: ${data.as_owner || '-'}
+                    </small>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-circle me-2"></i>${data.error}
+                </div>
+            `;
+        }
+        resultDiv.classList.remove('d-none');
+    } catch (err) {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-circle me-2"></i>Terjadi kesalahan koneksi
+            </div>
+        `;
+        resultDiv.classList.remove('d-none');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search"></i> Cek';
+});
+</script>
+{% endblock %}
