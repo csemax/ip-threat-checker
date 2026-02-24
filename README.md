@@ -24,5 +24,7 @@ pip install -r requirements.txt
 # 6. Buat folder yang diperlukan
 mkdir -p static/css static/js templates instance
 
+Buka browser → http://127.0.0.1:5000
+
 
 PUT YOUR API KEY IN .ENV FILE
