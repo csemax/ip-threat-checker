@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Detail Scan #{{ scan.id }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('history') }}">History</a></li>
+                <li class="breadcrumb-item active">Detail #{{ scan.id }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-{{ scan.risk_level|risk_color }} border-top border-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="mb-1">
+                            <i class="{{ scan.risk_level|risk_icon }} text-{{ scan.risk_level|risk_color }} me-2"></i>
+                            <code>{{ scan.ip_address }}</code>
+                        </h2>
+                        <p class="text-muted mb-0">
+                            Scan #{{ scan.id }} | {{ scan.scan_date }} |
+                            Type: <span class="badge bg-secondary">{{ scan.scan_type }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge bg-{{ scan.risk_level|risk_color }} fs-3 px-4 py-2">
+                            {{ scan.risk_level }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Info Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <div class="display-5 text-danger fw-bold">{{ scan.malicious }}</div>
+                <small class="text-muted">Malicious</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <div class="display-5 text-warning fw-bold">{{ scan.suspicious }}</div>
+                <small class="text-muted">Suspicious</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <div class="display-5 text-success fw-bold">{{ scan.harmless }}</div>
+                <small class="text-muted">Harmless</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card text-center border-secondary">
+            <div class="card-body">
+                <div class="display-5 text-secondary fw-bold">{{ scan.undetected }}</div>
+                <small class="text-muted">Undetected</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Network Info & Vendor Details -->
+<div class="row g-3">
+    <!-- Network Info -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-globe me-2"></i>Network Info</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td class="text-muted">IP Address</td>
+                        <td><code>{{ scan.ip_address }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Country</td>
+                        <td>{{ scan.country }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Network</td>
+                        <td>{{ scan.network }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">AS Owner</td>
+                        <td>{{ scan.as_owner }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Total Vendors</td>
+                        <td>{{ scan.total_vendors }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Risk Level</td>
+                        <td>
+                            <span class="badge bg-{{ scan.risk_level|risk_color }}">
+                                {{ scan.risk_level }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendor Details -->
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Vendor Analysis Details</h5>
+                <span class="badge bg-primary">{{ scan.details|length }} vendors</span>
+            </div>
+            <div class="card-body p-0">
+                {% if scan.details %}
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>Vendor</th>
+                                <th>Category</th>
+                                <th>Result</th>
+                                <th>Method</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in scan.details %}
+                            <tr class="{% if d.category == 'malicious' %}table-danger{% elif d.category == 'suspicious' %}table-warning{% endif %}">
+                                <td>{{ loop.index }}</td>
+                                <td><strong>{{ d.vendor_name }}</strong></td>
+                                <td>
+                                    {% if d.category == 'malicious' %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>malicious
+                                        </span>
+                                    {% elif d.category == 'suspicious' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-exclamation-circle me-1"></i>suspicious
+                                        </span>
+                                    {% elif d.category == 'harmless' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>harmless
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-dash-circle me-1"></i>undetected
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ d.result or '-' }}</td>
+                                <td><small class="text-muted">{{ d.method }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <p>Detail vendor tidak tersedia</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Back Button -->
+<div class="row mt-4">
+    <div class="col-12">
+        <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Kembali ke History
+        </a>
+        <a href="{{ url_for('single_check') }}" class="btn btn-success">
+            <i class="bi bi-search me-1"></i>Scan IP Lain
+        </a>
+    </div>
+</div>
+{% endblock %}

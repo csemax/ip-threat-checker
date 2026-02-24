@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Scan History{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="bi bi-clock-history me-2"></i>Scan History</h2>
+        <p class="text-muted">Riwayat semua pengecekan IP</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <form method="POST" action="{{ url_for('clear_history') }}"
+              onsubmit="return confirm('Hapus semua riwayat?')" class="d-inline">
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-1"></i>Clear All
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="row mb-3">
+    <div class="col-md-6">
+        <form method="GET" action="{{ url_for('history') }}">
+            <div class="input-group">
+                <input type="text" class="form-control" name="search"
+                       value="{{ search }}" placeholder="Cari IP address...">
+                <button class="btn btn-outline-success" type="submit">
+                    <i class="bi bi-search"></i>
+                </button>
+                {% if search %}
+                <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        {% if scans %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>IP Address</th>
+                        <th>Risk Level</th>
+                        <th>Malicious</th>
+                        <th>Suspicious</th>
+                        <th>Clean</th>
+                        <th>Country</th>
+                        <th>AS Owner</th>
+                        <th>Type</th>
+                        <th>Scan Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for scan in scans %}
+                    <tr>
+                        <td>{{ scan.id }}</td>
+                        <td><code>{{ scan.ip_address }}</code></td>
+                        <td>
+                            <span class="badge bg-{{ scan.risk_level|risk_color }}">
+                                <i class="{{ scan.risk_level|risk_icon }} me-1"></i>
+                                {{ scan.risk_level }}
+                            </span>
+                        </td>
+                        <td><span class="text-danger fw-bold">{{ scan.malicious }}</span></td>
+                        <td><span class="text-warning">{{ scan.suspicious }}</span></td>
+                        <td><span class="text-success">{{ scan.harmless }}</span></td>
+                        <td>{{ scan.country }}</td>
+                        <td><small>{{ scan.as_owner[:30] }}{% if scan.as_owner|length > 30 %}...{% endif %}</small></td>
+                        <td><span class="badge bg-secondary">{{ scan.scan_type }}</span></td>
+                        <td><small>{{ scan.scan_date }}</small></td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('detail', scan_id=scan.id) }}"
+                                   class="btn btn-outline-primary" title="Detail">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('delete_scan', scan_id=scan.id) }}"
+                                      class="d-inline"
+                                      onsubmit="return confirm('Hapus record ini?')">
+                                    <button type="submit" class="btn btn-outline-danger" title="Hapus">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox display-1"></i>
+            <p class="mt-2">
+                {% if search %}
+                    Tidak ditemukan hasil untuk "{{ search }}"
+                {% else %}
+                    Belum ada riwayat scan
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

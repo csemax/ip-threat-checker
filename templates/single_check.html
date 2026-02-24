@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Single IP Check{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-search me-2"></i>Single IP Check</h2>
+        <p class="text-muted">Cek reputasi satu IP address</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Form -->
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('single_check') }}">
+                    <div class="mb-3">
+                        <label for="ip_address" class="form-label fw-bold">
+                            <i class="bi bi-globe me-1"></i>IP Address
+                        </label>
+                        <input type="text" class="form-control form-control-lg"
+                               id="ip_address" name="ip_address"
+                               value="{{ ip_input }}"
+                               placeholder="Contoh: 8.8.8.8"
+                               required autocomplete="off">
+                        <div class="form-text">
+                            Masukkan public IP address (IPv4 atau IPv6)
+                        </div>
+                    </div>
+
+                    {% if error %}
+                    <div class="alert alert-danger py-2">
+                        <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-success btn-lg w-100">
+                        <i class="bi bi-shield-check me-2"></i>Scan IP
+                    </button>
+                </form>
+
+                <hr>
+
+                <h6 class="text-muted">Contoh IP untuk testing:</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm btn-outline-secondary example-ip"
+                            onclick="document.getElementById('ip_address').value='8.8.8.8'">
+                        8.8.8.8
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary example-ip"
+                            onclick="document.getElementById('ip_address').value='1.1.1.1'">
+                        1.1.1.1
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary example-ip"
+                            onclick="document.getElementById('ip_address').value='208.67.222.222'">
+                        208.67.222.222
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary example-ip"
+                            onclick="document.getElementById('ip_address').value='185.220.101.1'">
+                        185.220.101.1
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result -->
+    <div class="col-md-7">
+        {% if result and result.success %}
+        <div class="card shadow-sm border-{{ result.risk_level|risk_color }} border-top border-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="{{ result.risk_level|risk_icon }} text-{{ result.risk_level|risk_color }} me-2"></i>
+                    Hasil Scan
+                </h5>
+                <span class="badge bg-{{ result.risk_level|risk_color }} fs-6">
+                    {{ result.risk_level }}
+                </span>
+            </div>
+            <div class="card-body">
+                <!-- IP Info -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td class="text-muted">IP Address</td>
+                                <td><strong><code>{{ result.ip_address }}</code></strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Country</td>
+                                <td>{{ result.country }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Network</td>
+                                <td>{{ result.network }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">AS Owner</td>
+                                <td>{{ result.as_owner }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <!-- Detection Stats -->
+                        <div class="row text-center g-2">
+                            <div class="col-6">
+                                <div class="p-2 bg-danger bg-opacity-10 rounded">
+                                    <div class="h3 text-danger mb-0">{{ result.malicious }}</div>
+                                    <small class="text-muted">Malicious</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-warning bg-opacity-10 rounded">
+                                    <div class="h3 text-warning mb-0">{{ result.suspicious }}</div>
+                                    <small class="text-muted">Suspicious</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-success bg-opacity-10 rounded">
+                                    <div class="h3 text-success mb-0">{{ result.harmless }}</div>
+                                    <small class="text-muted">Clean</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 bg-secondary bg-opacity-10 rounded">
+                                    <div class="h3 text-secondary mb-0">{{ result.undetected }}</div>
+                                    <small class="text-muted">Undetected</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mb-3">
+                    <label class="form-label text-muted">Detection Ratio</label>
+                    <div class="progress" style="height: 25px;">
+                        {% if result.total_vendors > 0 %}
+                        <div class="progress-bar bg-danger"
+                             style="width: {{ (result.malicious / result.total_vendors * 100) }}%"
+                             title="{{ result.malicious }} malicious">
+                            {{ result.malicious }}
+                        </div>
+                        <div class="progress-bar bg-warning"
+                             style="width: {{ (result.suspicious / result.total_vendors * 100) }}%"
+                             title="{{ result.suspicious }} suspicious">
+                            {{ result.suspicious }}
+                        </div>
+                        <div class="progress-bar bg-success"
+                             style="width: {{ (result.harmless / result.total_vendors * 100) }}%"
+                             title="{{ result.harmless }} clean">
+                        </div>
+                        <div class="progress-bar bg-secondary"
+                             style="width: {{ (result.undetected / result.total_vendors * 100) }}%"
+                             title="{{ result.undetected }} undetected">
+                        </div>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">
+                        {{ result.malicious }} deteksi dari {{ result.total_vendors }} vendor keamanan
+                    </small>
+                </div>
+
+                <a href="{{ url_for('detail', scan_id=result.scan_id) }}"
+                   class="btn btn-primary">
+                    <i class="bi bi-eye me-1"></i>Lihat Detail Lengkap
+                </a>
+            </div>
+        </div>
+        {% elif not result %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-shield-check display-1 text-muted"></i>
+                <h5 class="mt-3 text-muted">Masukkan IP Address</h5>
+                <p class="text-muted">Hasil scan akan muncul di sini</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
