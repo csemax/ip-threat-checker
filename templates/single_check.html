@@ -161,7 +161,57 @@
                         {{ result.malicious }} deteksi dari {{ result.total_vendors }} vendor keamanan
                     </small>
                 </div>
+            <hr>
 
+            <!-- Intelligence Sources -->
+            <h6 class="mb-3">
+                <i class="bi bi-database-check me-2"></i>
+                Threat Intelligence Sources
+            </h6>
+
+            <div class="mb-3">
+
+                {% if result.source_vt %}
+                    <span class="badge bg-success me-2">
+                        <i class="bi bi-check-circle me-1"></i>VirusTotal
+                    </span>
+                {% else %}
+                    <span class="badge bg-danger me-2">
+                        <i class="bi bi-x-circle me-1"></i>VirusTotal
+                    </span>
+                {% endif %}
+
+                {% if result.source_abuse %}
+                    <span class="badge bg-success">
+                        <i class="bi bi-check-circle me-1"></i>AbuseIPDB
+                    </span>
+                {% else %}
+                    <span class="badge bg-danger">
+                        <i class="bi bi-x-circle me-1"></i>AbuseIPDB
+                    </span>
+                {% endif %}
+
+            </div>
+
+            <!-- Correlation Score -->
+            <div class="row text-center g-2 mb-3">
+                <div class="col-6">
+                    <div class="p-2 bg-primary bg-opacity-10 rounded">
+                        <div class="h4 text-primary mb-0">
+                            {{ result.final_score }}
+                        </div>
+                        <small class="text-muted">Final Risk Score</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-2 bg-dark bg-opacity-10 rounded">
+                        <div class="h4 text-dark mb-0">
+                            {{ result.abuse_score }}
+                        </div>
+                        <small class="text-muted">Abuse Confidence</small>
+                    </div>
+                </div>
+            </div>
                 <a href="{{ url_for('detail', scan_id=result.scan_id) }}"
                    class="btn btn-primary">
                     <i class="bi bi-eye me-1"></i>Lihat Detail Lengkap

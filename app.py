@@ -15,6 +15,7 @@ import json
 import csv
 from io import StringIO
 from flask import Response
+from abuseipdb import AbuseIPDBClient
 
 # ==========================================
 # INISIALISASI APP
@@ -26,7 +27,30 @@ app.config.from_object(Config)
 db = Database()
 vt = VirusTotalClient()
 validator = IPValidator()
+abuse = AbuseIPDBClient()
 
+def correlate_threat(vt_result, abuse_result):
+    """
+    Menggabungkan hasil VirusTotal dan AbuseIPDB
+    """
+    vt_score = (vt_result.get("malicious", 0) * 3) + \
+               (vt_result.get("suspicious", 0) * 2)
+
+    abuse_score = abuse_result.get("abuse_score", 0)
+
+    final_score = vt_score + (abuse_score // 10)
+
+    # Tentukan risk level
+    if final_score >= 15:
+        risk_level = "HIGH"
+    elif final_score >= 5:
+        risk_level = "MEDIUM"
+    elif final_score > 0:
+        risk_level = "LOW"
+    else:
+        risk_level = "SAFE"
+
+    return final_score, risk_level
 
 # ==========================================
 # ROUTES - HALAMAN WEB
@@ -50,23 +74,73 @@ def single_check():
     if request.method == 'POST':
         ip_input = request.form.get('ip_address', '').strip()
 
-        # Validasi IP
+        # ===============================
+        # VALIDASI IP
+        # ===============================
         validation = validator.validate(ip_input)
 
         if not validation['valid']:
             error = validation['message']
         else:
-            # Cek ke VirusTotal
-            result = vt.check_ip(ip_input)
+            # ===============================
+            # 1️⃣ VIRUSTOTAL CHECK
+            # ===============================
+            vt_result = vt.check_ip(ip_input)
 
-            if result['success']:
-                # Simpan ke database
-                result['scan_type'] = 'single'
-                scan_id = db.save_scan(result)
-                result['scan_id'] = scan_id
-                flash(f'IP {ip_input} berhasil dicek!', 'success')
+            if not vt_result.get("success"):
+                error = vt_result.get("error", "VirusTotal error")
             else:
-                error = result.get('error', 'Terjadi kesalahan')
+
+                # ===============================
+                # 2️⃣ ABUSEIPDB CHECK
+                # ===============================
+                abuse_result = abuse.check_ip(ip_input)
+
+                if abuse_result.get("success"):
+                    vt_result["abuse_score"] = abuse_result.get("abuse_score", 0)
+                    vt_result["abuse_reports"] = abuse_result.get("total_reports", 0)
+                else:
+                    vt_result["abuse_score"] = 0
+                    vt_result["abuse_reports"] = 0
+
+                # ===============================
+                # 3️⃣ CORRELATION ENGINE
+                # ===============================
+                vt_score = (vt_result.get("malicious", 0) * 3) + \
+                        (vt_result.get("suspicious", 0) * 2)
+
+                abuse_score = vt_result["abuse_score"]
+
+                final_score = vt_score + (abuse_score // 10)
+
+                # Risk classification
+                if final_score >= 15:
+                    risk_level = "HIGH"
+                elif final_score >= 5:
+                    risk_level = "MEDIUM"
+                elif final_score > 0:
+                    risk_level = "LOW"
+                else:
+                    risk_level = "SAFE"
+
+                vt_result["final_score"] = final_score
+                vt_result["risk_level"] = risk_level
+                vt_result["scan_type"] = "single"
+                vt_result["source_vt"] = vt_result.get("success", False)
+                vt_result["source_abuse"] = abuse_result.get("success", False)
+
+                # ===============================
+                # SAVE TO DATABASE
+                # ===============================
+                scan_id = db.save_scan(vt_result)
+                vt_result["scan_id"] = scan_id
+
+                result = vt_result
+
+                flash(
+                    f'IP {ip_input} berhasil dicek (Multi-Source Mode)!',
+                    'success'
+                )
 
     return render_template(
         'single_check.html',
@@ -87,46 +161,92 @@ def bulk_check():
         ip_input = request.form.get('ip_list', '').strip()
         file = request.files.get('ip_file')
 
-        # Jika ada file yang diupload
+        # ===============================
+        # HANDLE FILE UPLOAD
+        # ===============================
         if file and file.filename != '':
             try:
                 file_content = file.read().decode('utf-8')
-                # Gabungkan isi file dengan textarea
                 if ip_input:
                     ip_input += "\n" + file_content
                 else:
                     ip_input = file_content
             except Exception:
                 errors.append("Gagal membaca file. Pastikan format UTF-8.")
+
         if not ip_input:
             errors.append('Masukkan minimal 1 IP address')
         else:
-            # Parse dan validasi semua IP
+            # ===============================
+            # PARSE & VALIDATE
+            # ===============================
             parsed_ips = validator.parse_bulk(ip_input)
 
             valid_ips = [p for p in parsed_ips if p['valid']]
             invalid_ips = [p for p in parsed_ips if not p['valid']]
 
-            # Tampilkan error untuk IP yang tidak valid
-            for inv in invalid_ips:
+        for inv in invalid_ips:
                 errors.append(f"{inv['ip']}: {inv['message']}")
 
-            # Cek setiap IP yang valid
-            for ip_data in valid_ips:
-                result = vt.check_ip(ip_data['ip'])
+            # ===============================
+            # PROCESS VALID IPS
+            # ===============================
+        for ip_data in valid_ips:
 
-                if result['success']:
-                    result['scan_type'] = 'bulk'
-                    scan_id = db.save_scan(result)
-                    result['scan_id'] = scan_id
-                    results.append(result)
-                else:
+                ip_address = ip_data['ip']
+
+                # ---- 1️⃣ VirusTotal ----
+                vt_result = vt.check_ip(ip_address)
+
+                if not vt_result.get("success"):
                     errors.append(
-                        f"{ip_data['ip']}: {result.get('error', 'Error')}")
+                        f"{ip_address}: {vt_result.get('error', 'VirusTotal error')}")
+                    continue
 
-            if results:
-                flash(
-                    f'{len(results)} IP berhasil dicek!', 'success')
+                # ---- 2️⃣ AbuseIPDB ----
+                abuse_result = abuse.check_ip(ip_address)
+
+                if abuse_result.get("success"):
+                    vt_result["abuse_score"] = abuse_result.get("abuse_score", 0)
+                    vt_result["abuse_reports"] = abuse_result.get("total_reports", 0)
+                else:
+                    vt_result["abuse_score"] = 0
+                    vt_result["abuse_reports"] = 0
+
+                # ---- 3️⃣ Correlation Engine ----
+                vt_score = (vt_result.get("malicious", 0) * 3) + \
+                        (vt_result.get("suspicious", 0) * 2)
+
+                abuse_score = vt_result["abuse_score"]
+
+                final_score = vt_score + (abuse_score // 10)
+
+                # Risk classification
+                if final_score >= 15:
+                    risk_level = "HIGH"
+                elif final_score >= 5:
+                    risk_level = "MEDIUM"
+                elif final_score > 0:
+                    risk_level = "LOW"
+                else:
+                    risk_level = "SAFE"
+
+                vt_result["final_score"] = final_score
+                vt_result["risk_level"] = risk_level
+                vt_result["scan_type"] = "bulk"
+                vt_result["source_vt"] = vt_result.get("success", False)
+                vt_result["source_abuse"] = abuse_result.get("success", False)
+
+                # ===============================
+                # SAVE TO DATABASE
+                # ===============================
+                scan_id = db.save_scan(vt_result)
+                vt_result["scan_id"] = scan_id
+
+                results.append(vt_result)
+
+        if results:
+                flash(f'{len(results)} IP berhasil dicek (Multi-Source Mode)!', 'success')
 
     return render_template(
         'bulk_check.html',

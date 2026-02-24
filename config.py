@@ -21,9 +21,15 @@ class Config:
     VT_API_KEY = os.getenv('VT_API_KEY', 'YOUR_API_KEY_HERE')
     VT_BASE_URL = 'https://www.virustotal.com/api/v3'
 
+    ABUSEIPDB_API_KEY = os.getenv('ABUSEIPDB_API_KEY')
+    ABUSEIPDB_BASE_URL = 'https://api.abuseipdb.com/api/v2'
+
     # Rate Limiting (Free API: 4 requests/menit)
     VT_RATE_LIMIT = 4
     VT_RATE_PERIOD = 60  # detik
+
+    ABUSE_RATE_LIMIT = 1000  # free tier lebih besar
+    ABUSE_RATE_PERIOD = 86400  # 24 jam
 
     # Database
     DATABASE_PATH = os.path.join(
