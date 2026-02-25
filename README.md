@@ -272,9 +272,3 @@ Project ini dibuat untuk:
 # 📜 License
 
 Project ini dibuat untuk tujuan edukasi dan pembelajaran.
-
----
-
-# ⭐ Jika Project Ini Bermanfaat
-
-Silakan beri ⭐ di repository ini.
