@@ -197,8 +197,6 @@ VT_API_KEY=your_virustotal_api_key_here
 ABUSEIPDB_API_KEY=your_abuseipdb_api_key_here
 ```
 
-⚠️ Jangan gunakan API key asli di repository publik.
-
 ---
 
 ## 3️⃣ Pastikan config.py Memuat Environment
